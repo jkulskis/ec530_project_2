@@ -1,5 +1,6 @@
 import json
-from patient_monitor import patient
+import patient
+
 
 def add_device_data(
     patient_id: int,

@@ -8,10 +8,23 @@ Install required dependencies with pip:
 pip install -r requirements.txt
 ```
 
-## Usage
+## Flask Endpoints
+| Page Name | Endpoint | Method | Notes | 
+| -------- | ------- | ------ | ---- |
+| Welcome page (index) | / | [GET] | |
+| Help | /help | [GET] | |
+| Get patient info | /patient/{int:patient_id} | [GET] | |
+| Create a patient | /patient/create/{int:patient_id} | [POST] | |
+| Add device data | /device/add-data/{int:patient_id} | [POST] | Send new key/values as query params
+
+
+## Functional Usage
 
 ### Patient Management
 Patients can be added or removed from the system using `add_patient(patient_id: int)` and `remove_patient(patient_id: int)` respectively. The `patient_id` passed to `add_patient()` must not already exist, and the `patient_id` passed to `remove_patient()` must already exist.
+
+### Patient Storage
+Currently, the data is dumped into a mongodb db located in the cloud (URI stored in secrets)
 
 ### Devices
 Devices can create or modify data for patients with the device module. Use add_device_data to create or modify existing patient data. The only required parameter is the patient id, an integer used to identify the patient. Other parameters are passed as necessary based on the device that is sending over the data.
@@ -31,10 +44,14 @@ add_device_data(
 e.g. An oximeter would call `add_device_data()` with the `patient_id` parameter and the `oxygen_level` parameter. If the patient id exists, then their data is updated to reflect this new device measurement.
 
 ## Tests
-Run tests by executing `pytest` in the root directory
+Run tests by executing `pytest` in the root directory. Tests also connect to the cloud db, so `MONGO_URI` must be set as an env variable or in a config toml file in the `patient_monitor` dir.
 
 ## Workflow (Branches)
 A branch is created off of main to add a new feature, bug-fix, or other change. Once the work is finished and actions on this branch run succesfully, then the work should be squashed and merged into the main branch.
 
+## Cloud
+Currently hosting this version on AWS Elastic Beanstalk: 
+http://patientmonitorec530-env.eba-dnv2imbb.us-east-2.elasticbeanstalk.com/
+
 ## Note
-Currently, the data is dumped into a json file located at `data/patient_data.json`, but we will update this to a database in the near future with one of our feature tickets
+We will soon move the application to the cloud, instead of just the db

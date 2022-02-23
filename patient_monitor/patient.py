@@ -1,15 +1,23 @@
 import json
+from db import db
 
-# TODO: Use a real db instead of json file
-DATA_FILE = 'data/patient_data.json'
-try:
-    patient_db = json.loads(DATA_FILE)
-except:
-    patient_db = {}
+VALID_PATIENT_ATTRIBUTES = {
+    "temp",
+    "blood_pressure",
+    "pulse",
+    "oxygen_level",
+    "weight",
+    "glucose_level",
+}
 
-def update_patient_db():
-    with open(DATA_FILE, 'w') as write_file:
-        json.dump(patient_db, write_file)
+
+def get_patient(patient_id: int):
+    """Get patient info"""
+    patient = db.patients.find_one({"_id": patient_id})
+    if patient is None:
+        raise ValueError(f"Can't find pateint {patient_id}")
+    return patient
+
 
 def add_patient(patient_id: int):
     """Add a patient to the db
@@ -17,9 +25,10 @@ def add_patient(patient_id: int):
     Args:
         patient_id (int): unique id for the patient
     """
-    if patient_id in patient_db:
+    if db.patients.count_documents({"_id": patient_id}, limit=1):
         raise ValueError(f"Patient {patient_id} Already Exists")
-    patient_db[patient_id] = {
+    new_patient = {
+        "_id": patient_id,
         "temp": None,
         "blood_pressure": None,
         "pulse": None,
@@ -27,7 +36,8 @@ def add_patient(patient_id: int):
         "weight": None,
         "glucose_level": None,
     }
-    update_patient_db()
+    db.patients.insert_one(new_patient)
+
 
 def remove_patient(patient_id: int):
     """Remove a patient from the db
@@ -35,10 +45,10 @@ def remove_patient(patient_id: int):
     Args:
         patient_id (int): unique id of the patient
     """
-    if patient_id not in patient_db:
-        raise KeyError(f"Patient {patient_id} Does Not Exist")
-    patient_db.pop(patient_id)
-    update_patient_db()
+    del_result = db.patients.delete_one({"_id": patient_id})
+    if not del_result.deleted_count:
+        raise ValueError(f"Patient {patient_id} Does Not Exist")
+
 
 def modify_patient(patient_id: int, **kwargs):
     """Modify different attributes (kwargs) of a patient's data. If kwargs
@@ -47,18 +57,17 @@ def modify_patient(patient_id: int, **kwargs):
     Args:
         patient_id (int): unique id of the patient
     """
-    if patient_id not in patient_db:
-        raise KeyError(f"Patient {patient_id} Does Not Exist")
-    unmodified_patient_data = patient_db[patient_id].copy()
+    updates = {"$set": {}}
     for k, v in kwargs.items():
         if v is None:
             continue
-        if k not in patient_db[patient_id]:
-            # must modify all kwargs or none of them
-            patient_db[patient_id] = unmodified_patient_data
+        if k not in VALID_PATIENT_ATTRIBUTES:
             raise ValueError(f"Invalid Patient Data Key: {k}")
-        patient_db[patient_id][k] = v
-    update_patient_db()
+        updates["$set"][k] = v
+    update_result = db.patients.update_one({"_id": patient_id}, updates)
+    if not update_result.matched_count:
+        raise ValueError(f"Patient {patient_id} Does Not Exist")
+
 
 def reset_patient(patient_id: int):
     """Set all attributes of a patient's data to None
@@ -66,8 +75,9 @@ def reset_patient(patient_id: int):
     Args:
         patient_id (int): unique id of the patient
     """
-    if patient_id not in patient_db:
-        raise KeyError(f"Patient {patient_id} Does Not Exist")
-    for k in patient_db[patient_id].keys():
-        patient_db[patient_id][k] = None
-    update_patient_db()
+    updates = {"$set": {}}
+    for k in VALID_PATIENT_ATTRIBUTES:
+        updates["$set"][k] = None
+    update_result = db.patients.update_one({"_id": patient_id}, updates)
+    if not update_result.matched_count:
+        raise ValueError(f"Patient {patient_id} Does Not Exist")
